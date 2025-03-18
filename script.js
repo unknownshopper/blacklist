@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Manejar el formulario de captura
 if (document.getElementById('capturaForm')) {
-    document.getElementById('capturaForm').addEventListener('submit', function(e) {
+    document.getElementById('capturaForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
         const nombreCompleto = document.getElementById('nombreCompleto').value.trim();
@@ -16,31 +16,124 @@ if (document.getElementById('capturaForm')) {
         const anoDespido = document.getElementById('anoDespido').value;
         const motivo = document.getElementById('motivo').value.trim();
 
-        // Buscar si la persona ya existe
-        let perfil = perfiles.find(p => p.nombreCompleto.toLowerCase() === nombreCompleto.toLowerCase());
+        try {
+            // Buscar si la persona ya existe
+            const querySnapshot = await db.collection('perfiles')
+                .where('nombreCompleto', '==', nombreCompleto)
+                .get();
 
-        if (!perfil) {
-            perfil = {
-                nombreCompleto: nombreCompleto,
-                historial: []
-            };
-            perfiles.push(perfil);
+            let perfilRef;
+            if (querySnapshot.empty) {
+                // Crear nuevo perfil
+                perfilRef = await db.collection('perfiles').add({
+                    nombreCompleto: nombreCompleto,
+                    historial: [{
+                        empresa: empresa,
+                        anoDespido: anoDespido,
+                        motivo: motivo
+                    }]
+                });
+            } else {
+                // Actualizar perfil existente
+                perfilRef = querySnapshot.docs[0].ref;
+                await perfilRef.update({
+                    historial: firebase.firestore.FieldValue.arrayUnion({
+                        empresa: empresa,
+                        anoDespido: anoDespido,
+                        motivo: motivo
+                    })
+                });
+            }
+
+            document.getElementById('mensaje').innerHTML = 
+                '<p style="color: green; font-weight: bold;">¡Captura Exitosa!</p>';
+            this.reset();
+        } catch (error) {
+            console.error("Error: ", error);
+            document.getElementById('mensaje').innerHTML = 
+                '<p style="color: red; font-weight: bold;">Error al guardar el registro</p>';
+        }
+    });
+}
+
+// Search functionality
+if (document.getElementById('searchButton')) {
+    document.getElementById('searchButton').addEventListener('click', async function() {
+        const nombreInput = document.getElementById('nombre').value.trim();
+        const resultadoDiv = document.getElementById('resultado');
+        
+        if (!nombreInput) {
+            resultadoDiv.innerHTML = '<p>Por favor ingrese un nombre para buscar.</p>';
+            return;
         }
 
-        perfil.historial.push({
-            empresa: empresa,
-            anoDespido: anoDespido,
-            motivo: motivo
-        });
+        try {
+            const querySnapshot = await db.collection('perfiles')
+                .where('nombreCompleto', '>=', nombreInput)
+                .where('nombreCompleto', '<=', nombreInput + '\uf8ff')
+                .get();
 
-        localStorage.setItem('perfiles', JSON.stringify(perfiles));
-        
-        // Mostrar mensaje de éxito
-        document.getElementById('mensaje').innerHTML = '<p style="color: green; font-weight: bold;">¡Captura Exitosa!</p>';
-        
-        // Limpiar formulario
-        this.reset();
+            if (!querySnapshot.empty) {
+                const persona = querySnapshot.docs[0].data();
+                resultadoDiv.innerHTML = `
+                    <h2>¡Alerta! Persona encontrada</h2>
+                    <p><strong>Nombre:</strong> ${persona.nombreCompleto}</p>
+                    <h3>Historial:</h3>
+                    ${persona.historial.map(h => `
+                        <div class="history-entry">
+                            <p><strong>Empresa:</strong> ${h.empresa}</p>
+                            <p><strong>Año de Despido:</strong> ${h.anoDespido}</p>
+                            <p><strong>Motivo:</strong> ${h.motivo}</p>
+                        </div>
+                    `).join('')}
+                `;
+            } else {
+                resultadoDiv.innerHTML = '<p>Persona no encontrada en la lista negra.</p>';
+            }
+        } catch (error) {
+            console.error("Error: ", error);
+            resultadoDiv.innerHTML = '<p>Error al realizar la búsqueda</p>';
+        }
     });
+}
+
+// Función para mostrar lista completa (solo admin)
+async function mostrarListaCompleta() {
+    const resultadoDiv = document.getElementById('resultado');
+    
+    try {
+        const querySnapshot = await db.collection('perfiles').get();
+        
+        if (querySnapshot.empty) {
+            resultadoDiv.innerHTML = '<p>No hay registros en la base de datos.</p>';
+            return;
+        }
+
+        resultadoDiv.innerHTML = `
+            <h2>Lista Completa de Registros</h2>
+            ${querySnapshot.docs.map(doc => {
+                const persona = doc.data();
+                return `
+                    <div class="person-record">
+                        <h3>${persona.nombreCompleto}</h3>
+                        <div class="history-entries">
+                            ${persona.historial.map(h => `
+                                <div class="history-entry">
+                                    <p><strong>Empresa:</strong> ${h.empresa}</p>
+                                    <p><strong>Año de Despido:</strong> ${h.anoDespido}</p>
+                                    <p><strong>Motivo:</strong> ${h.motivo}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <hr>
+                    </div>
+                `;
+            }).join('')}
+        `;
+    } catch (error) {
+        console.error("Error: ", error);
+        resultadoDiv.innerHTML = '<p>Error al cargar la lista completa</p>';
+    }
 }
 
 function mostrarRegistros() {
@@ -64,80 +157,6 @@ function mostrarRegistros() {
         `;
         registrosDiv.appendChild(perfilDiv);
     });
-}
-
-// Search functionality
-if (document.getElementById('searchButton')) {
-    document.getElementById('searchButton').addEventListener('click', function() {
-        const nombreInput = document.getElementById('nombre').value.trim();
-        const resultadoDiv = document.getElementById('resultado');
-        
-        if (!nombreInput) {
-            resultadoDiv.innerHTML = '<p>Por favor ingrese un nombre para buscar.</p>';
-            return;
-        }
-        
-        // Get profiles from localStorage
-        const perfiles = JSON.parse(localStorage.getItem('perfiles')) || [];
-        
-        // Normalize input name: remove accents, convert to lowercase
-        const normalizedInput = nombreInput.toLowerCase()
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        
-        // Search for the person with normalized comparison
-        const persona = perfiles.find(p => 
-            p.nombreCompleto.toLowerCase()
-                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-                .includes(normalizedInput)
-        );
-
-        if (persona) {
-            resultadoDiv.innerHTML = `
-                <h2>¡Alerta! Persona encontrada</h2>
-                <p><strong>Nombre:</strong> ${persona.nombreCompleto}</p>
-                <h3>Historial:</h3>
-                ${persona.historial.map(h => `
-                    <div class="history-entry">
-                        <p><strong>Empresa:</strong> ${h.empresa}</p>
-                        <p><strong>Año de Despido:</strong> ${h.anoDespido}</p>
-                        <p><strong>Motivo:</strong> ${h.motivo}</p>
-                    </div>
-                `).join('')}
-            `;
-        } else {
-            resultadoDiv.innerHTML = '<p>Persona no encontrada en la lista negra.</p>';
-        }
-    });
-}
-
-// Add this new function for displaying all records
-function mostrarListaCompleta() {
-    const resultadoDiv = document.getElementById('resultado');
-    const perfiles = JSON.parse(localStorage.getItem('perfiles')) || [];
-    
-    if (perfiles.length === 0) {
-        resultadoDiv.innerHTML = '<p>No hay registros en la base de datos.</p>';
-        return;
-    }
-
-    resultadoDiv.innerHTML = `
-        <h2>Lista Completa de Registros</h2>
-        ${perfiles.map(persona => `
-            <div class="person-record">
-                <h3>${persona.nombreCompleto}</h3>
-                <div class="history-entries">
-                    ${persona.historial.map(h => `
-                        <div class="history-entry">
-                            <p><strong>Empresa:</strong> ${h.empresa}</p>
-                            <p><strong>Año de Despido:</strong> ${h.anoDespido}</p>
-                            <p><strong>Motivo:</strong> ${h.motivo}</p>
-                        </div>
-                    `).join('')}
-                </div>
-                <hr>
-            </div>
-        `).join('')}
-    `;
 }
 
 // Add event listener for the view all button
@@ -168,35 +187,15 @@ if (document.getElementById('loginForm')) {
             
             // Redirect based on role
             if (user.role === 'capturista') {
-                window.location.href = 'captura.html';
+                window.location.href = './captura.html';
             } else {
-                window.location.href = 'search.html';  // Corregido: redirige a search.html para admin y consultor
+                window.location.href = './search.html';
             }
         } else {
             alert('Usuario o contraseña incorrectos');
         }
     });
 }
-
-// Update permission checks
-document.addEventListener('DOMContentLoaded', function() {
-    const userPermissions = JSON.parse(localStorage.getItem('userPermissions') || '[]');
-    const userRole = localStorage.getItem('userRole');
-    
-    // Hide capture link if no permission
-    if (document.querySelector('.nav-bar')) {
-        if (!userPermissions.includes('capture')) {
-            const capturaLink = document.querySelector('a[href="captura.html"]');
-            if (capturaLink) capturaLink.style.display = 'none';
-        }
-    }
-
-    // Show viewAll button only for admin
-    const viewAllButton = document.getElementById('viewAllButton');
-    if (viewAllButton) {
-        viewAllButton.style.display = userRole === 'admin' ? 'inline-block' : 'none';
-    }
-});
 
 // Update checkLoginStatus
 function checkLoginStatus() {
@@ -205,23 +204,23 @@ function checkLoginStatus() {
     const currentPage = window.location.pathname.split('/').pop();
     
     if (!isLoggedIn) {
-        window.location.href = 'login.html';
+        window.location.href = './login.html';
         return;
     }
 
     // Check specific page permissions
     if (currentPage === 'captura.html' && !userPermissions.includes('capture')) {
-        window.location.href = 'search.html';
+        window.location.href = './search.html';
     }
 }
 
-// Update logout to clear all user data
+// Update logout
 if (document.getElementById('logoutButton')) {
     document.getElementById('logoutButton').addEventListener('click', function(e) {
         e.preventDefault();
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('userRole');
         localStorage.removeItem('userPermissions');
-        window.location.href = 'index.html';
+        window.location.href = './index.html';
     });
 }
