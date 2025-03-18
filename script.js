@@ -1,8 +1,9 @@
 // Cargar datos guardados al iniciar
 let perfiles = JSON.parse(localStorage.getItem('perfiles')) || [];
 
-// Mostrar registros existentes al cargar la página
+// Evento único de DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
+    checkLoginStatus();
     mostrarRegistros();
 });
 
@@ -172,6 +173,15 @@ const users = {
 };
 
 // Login functionality
+// Al inicio del archivo, después de la declaración de perfiles
+document.addEventListener('DOMContentLoaded', () => {
+    checkLoginStatus();
+});
+
+// Remove the duplicate DOMContentLoaded event listener that was added later
+// and keep only the one at the top of the file
+
+// Login functionality (update the existing one)
 if (document.getElementById('loginForm')) {
     document.getElementById('loginForm').addEventListener('submit', function(e) {
         e.preventDefault();
@@ -184,6 +194,8 @@ if (document.getElementById('loginForm')) {
             localStorage.setItem('isLoggedIn', 'true');
             localStorage.setItem('userRole', user.role);
             localStorage.setItem('userPermissions', JSON.stringify(user.permissions));
+            
+            console.log('Login exitoso:', user.role); // Para debugging
             
             // Redirect based on role
             if (user.role === 'capturista') {
