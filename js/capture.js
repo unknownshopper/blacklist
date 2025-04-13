@@ -2,31 +2,39 @@ import { db } from './firebase-config.js';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 document.addEventListener('DOMContentLoaded', () => {
-    const captureForm = document.querySelector('.capture-form');
+    // Verificar autenticación
+    const isLoggedIn = sessionStorage.getItem('isLoggedIn');
+    if (!isLoggedIn) {
+        window.location.href = 'index.html';
+        return;
+    }
 
+    const captureForm = document.querySelector('.capture-form');
+    
     captureForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-
+        
         try {
-            const docRef = await addDoc(collection(db, 'records'), {
+            const formData = {
                 fullName: captureForm.fullname.value,
                 rfc: captureForm.rfc.value.toUpperCase(),
                 company: captureForm.company.value,
                 terminationDate: captureForm.termination_date.value,
                 terminationReason: captureForm.termination_reason.value,
-                createdAt: serverTimestamp(),
-                createdBy: sessionStorage.getItem('userRole')
-            });
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                createdBy: sessionStorage.getItem('username')
+            };
 
+            await db.collection('records').add(formData);
             alert('Registro guardado exitosamente');
             captureForm.reset();
         } catch (error) {
-            console.error('Error al guardar el registro:', error);
+            console.error('Error:', error);
             alert('Error al guardar el registro');
         }
     });
 
-    // RFC Validation
+    // Validación de RFC
     const rfcInput = captureForm.querySelector('[name="rfc"]');
     rfcInput.addEventListener('input', (e) => {
         e.target.value = e.target.value.toUpperCase();

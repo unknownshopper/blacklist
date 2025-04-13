@@ -1,32 +1,39 @@
-const users = {
-    usuario: {
-        password: 'usuario123456',
-        role: 'user'
-    },
-    admin: {
-        password: 'admin123456',
-        role: 'admin'
-    }
-};
-
 function handleLogin(event) {
     event.preventDefault();
     
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
 
-    if (users[username] && users[username].password === password) {
-        // Store user role in sessionStorage
-        sessionStorage.setItem('userRole', users[username].role);
-        sessionStorage.setItem('isLoggedIn', 'true');
-        
-        // Redirect based on role
-        if (users[username].role === 'admin') {
-            window.location.href = 'captur.html';
-        } else {
-            window.location.href = 'consul.html';
+    // Credenciales predefinidas
+    const credentials = {
+        'usuario': {
+            password: 'usuario123456',
+            role: 'user'
+        },
+        'admin': {
+            password: 'admin123456',
+            role: 'admin'
         }
+    };
+
+    if (credentials[username] && credentials[username].password === password) {
+        sessionStorage.setItem('userRole', credentials[username].role);
+        sessionStorage.setItem('isLoggedIn', 'true');
+        sessionStorage.setItem('username', username);
+        window.location.href = 'consul.html';
     } else {
         alert('Usuario o contraseña incorrectos');
     }
 }
+
+// Verificar autenticación
+document.addEventListener('DOMContentLoaded', () => {
+    const isLoggedIn = sessionStorage.getItem('isLoggedIn');
+    const currentPage = window.location.pathname.split('/').pop();
+    
+    if (currentPage !== 'index.html' && !isLoggedIn) {
+        window.location.href = 'index.html';
+    } else if (currentPage === 'index.html' && isLoggedIn) {
+        window.location.href = 'consul.html';
+    }
+});
