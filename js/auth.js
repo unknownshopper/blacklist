@@ -1,17 +1,22 @@
-function checkAuth() {
-    const isLoggedIn = sessionStorage.getItem('isLoggedIn');
-    const userRole = sessionStorage.getItem('userRole');
+import { auth } from './firebase-config.js';
+import { signOut } from 'https://www.gstatic.com/firebasejs/10.5.2/firebase-auth.js';
 
-    if (!isLoggedIn) {
+export async function handleLogout() {
+    try {
+        await signOut(auth);
+        sessionStorage.removeItem('userRole');
+        sessionStorage.removeItem('isLoggedIn');
         window.location.href = 'index.html';
-        return;
-    }
-
-    // For pages that only admin should access
-    if (window.location.pathname.includes('captur.html') && userRole !== 'admin') {
-        window.location.href = 'consul.html';
+    } catch (error) {
+        console.error('Error al cerrar sesión:', error);
+        alert('Error al cerrar sesión');
     }
 }
 
-// Run auth check when page loads
-checkAuth();
+// Add logout button event listener
+document.addEventListener('DOMContentLoaded', () => {
+    const logoutButton = document.getElementById('logoutBtn');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', handleLogout);
+    }
+});
