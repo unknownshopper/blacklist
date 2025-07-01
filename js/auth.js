@@ -42,50 +42,71 @@ function setupLogout() {
 
 // Función para manejar el inicio de sesión
 function setupLoginForm() {
+    console.log('Buscando formulario de login...');
     const loginForm = document.querySelector('.login-form');
+    
     if (!loginForm) {
-        console.warn('No se encontró el formulario de login');
+        console.error('❌ No se encontró ningún formulario con la clase "login-form"');
+        console.log('Elementos del DOM:', document.body.innerHTML);
         return;
     }
 
+    console.log('✔️ Formulario encontrado:', loginForm);
+    
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const formData = new FormData(loginForm);
-        const email = formData.get('username');
-        const password = formData.get('password');
-
-            if (!email || !password) {
-                alert('Por favor ingresa correo y contraseña');
-                return;
-            }
-
-            // Validar formato de correo electrónico
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                alert('Por favor ingresa un correo electrónico válido');
-                return;
-            }
-
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-                // Redirigir después de inicio de sesión exitoso
-                window.location.href = 'consul.html';
-            } catch (error) {
-                console.error('Error de autenticación:', error);
-                let errorMessage = 'Error al iniciar sesión';
-                
-                if (error.code === 'auth/invalid-email') {
-                    errorMessage = 'El correo electrónico no es válido';
-                } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-                    errorMessage = 'Correo o contraseña incorrectos';
-                } else {
-                    errorMessage = error.message;
-                }
-                
-                alert(errorMessage);
-            }
+        console.log('Formulario enviado');
+        
+        // Obtener valores usando el método más confiable
+        const emailInput = loginForm.elements['username'];
+        const passwordInput = loginForm.elements['password'];
+        
+        console.log('Elementos del formulario:', {
+            username: emailInput,
+            password: passwordInput
         });
+        
+        if (!emailInput || !passwordInput) {
+            console.error('❌ No se encontraron los campos de usuario/contraseña');
+            return;
+        }
+        
+        const email = emailInput.value;
+        const password = passwordInput.value;
+
+        if (!email || !password) {
+            alert('Por favor ingresa correo y contraseña');
+            return;
+        }
+
+        // Validar formato de correo electrónico
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            alert('Por favor ingresa un correo electrónico válido');
+            return;
+        }
+
+        try {
+            console.log('Intentando iniciar sesión con:', { email });
+            await signInWithEmailAndPassword(auth, email, password);
+            // Redirigir después de inicio de sesión exitoso
+            window.location.href = 'consul.html';
+        } catch (error) {
+            console.error('Error de autenticación:', error);
+            let errorMessage = 'Error al iniciar sesión';
+            
+            if (error.code === 'auth/invalid-email') {
+                errorMessage = 'El correo electrónico no es válido';
+            } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                errorMessage = 'Correo o contraseña incorrectos';
+            } else {
+                errorMessage = error.message;
+            }
+            
+            alert(errorMessage);
+        }
+    });
 }
 
 // Inicializar cuando el DOM esté completamente cargado
