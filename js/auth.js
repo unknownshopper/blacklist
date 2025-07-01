@@ -44,8 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = loginForm.username.value;  // Changed from loginForm.email to loginForm.username
-            const password = loginForm.password.value;
+            const email = loginForm.querySelector('#username').value;
+            const password = loginForm.querySelector('#password').value;
 
             if (!email || !password) {
                 alert('Por favor ingresa correo y contraseña');
