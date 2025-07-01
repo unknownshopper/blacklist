@@ -1,6 +1,29 @@
 import { auth } from './firebase-config.js';
 import { signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.5.2/firebase-auth.js';
 
+// Importar los módulos necesarios
+import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-auth.js";
+
+document.addEventListener('DOMContentLoaded', () => {
+    const logoutBtn = document.getElementById('logoutBtn');
+    
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            try {
+                const auth = getAuth();
+                await signOut(auth);
+                sessionStorage.removeItem('isLoggedIn');
+                sessionStorage.removeItem('userRole');
+                window.location.href = 'index.html';
+            } catch (error) {
+                console.error('Error al cerrar sesión:', error);
+                alert('Ocurrió un error al cerrar sesión');
+            }
+        });
+    }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.querySelector('.login-form');
     if (loginForm) {

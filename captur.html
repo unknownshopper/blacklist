@@ -7,12 +7,12 @@
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="shortcut icon" href="img/favicon.ico" type="image/x-icon">
-    <script src="js/firebase-config.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.5.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.5.2/firebase-firestore-compat.js"></script>
-    <script>
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+    <script type="module">
+        // Importar la configuración de Firebase
+        import { db, auth } from './js/firebase-config.js';
+        // Hacer disponible globalmente si es necesario
+        window.db = db;
+        window.auth = auth;
     </script>
     <script src="js/nav.js" defer></script>
 </head>

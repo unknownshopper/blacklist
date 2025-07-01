@@ -1,3 +1,6 @@
+import { auth } from './firebase-config.js';
+import { signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.5.2/firebase-auth.js';
+
 // login.js modificado
 document.addEventListener('DOMContentLoaded', () => {
     // Verificar si hay credenciales en la URL
