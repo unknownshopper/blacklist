@@ -9,11 +9,49 @@
     <link rel="shortcut icon" href="img/favicon.ico" type="image/x-icon">
     <script src="js/nav.js" defer></script>
     <script type="module">
-        // Importar la configuración de Firebase
+        // Importar la configuración de Firebase y las funciones de autenticación
         import { db, auth } from './js/firebase-config.js';
+        import { setupLogout } from './js/auth.js';
+        
         // Hacer disponible globalmente si es necesario
         window.db = db;
         window.auth = auth;
+        
+        // Función para verificar autenticación
+        function checkAuth() {
+            const isLoggedIn = sessionStorage.getItem('isLoggedIn');
+            const userRole = sessionStorage.getItem('userRole');
+            const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+            
+            if (!isLoggedIn || userRole !== 'admin') {
+                console.log('Usuario no autenticado o sin permisos, redirigiendo...');
+                window.location.href = 'index.html';
+                return false;
+            }
+            
+            console.log('Usuario autenticado correctamente');
+            return true;
+        }
+        
+        // Inicializar cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM cargado, verificando autenticación...');
+            
+            if (checkAuth()) {
+                console.log('Configurando botón de cierre de sesión...');
+                setupLogout();
+                
+                // Verificar nuevamente después de configurar el botón
+                const logoutBtn = document.getElementById('logoutBtn');
+                console.log('Botón de cierre de sesión en el DOM:', !!logoutBtn);
+                
+                if (logoutBtn) {
+                    console.log('Configuración de cierre de sesión completada');
+                } else {
+                    console.error('Error: No se pudo configurar el botón de cierre de sesión');
+                }
+            }
+        });
     </script>
     <!-- Eliminada la importación de auth.js -->
 </head>

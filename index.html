@@ -62,10 +62,10 @@
         <p>Ofrecemos servicios de investigación e integración de referencias y antecedentes laborales, empleando sistemas y ejecutando procesos con certificaciones de alta calidad y desempeño</p>
     </main>
     <section class="login-container">
-        <form class="login-form">
+        <form class="login-form" onsubmit="handleLogin(event)">
             <h2>Iniciar Sesión</h2>
             <div class="form-group">
-                <input type="text" name="username" id="username" required placeholder="Usuario" autocomplete="username">
+                <input type="text" name="username" id="username" required placeholder="Usuario o correo electrónico" autocomplete="username">
             </div>
             <div class="form-group">
                 <input type="password" name="password" id="password" required placeholder="Contraseña" autocomplete="current-password">
@@ -79,15 +79,37 @@
     <script type="module">
         // Importar la configuración de Firebase
         import { db, auth } from './js/firebase-config.js';
+        import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.5.2/firebase-auth.js';
+        
         // Hacer disponible globalmente si es necesario
         window.db = db;
         window.auth = auth;
         
-        // Cargar auth.js solo si estamos en la página de login
-        if (window.location.pathname.endsWith('index.html') || 
-            window.location.pathname === '/') {
-            import('./js/auth.js');
-        }
+        // Cargar login.js que contiene la función handleLogin
+        import './js/login.js';
+        
+        // Verificar estado de autenticación
+        onAuthStateChanged(auth, (user) => {
+            const currentPage = window.location.pathname.split('/').pop();
+            
+            if (user) {
+                // Usuario autenticado
+                sessionStorage.setItem('isLoggedIn', 'true');
+                sessionStorage.setItem('userRole', 'admin');
+                
+                if (currentPage === 'index.html') {
+                    window.location.href = 'consul.html';
+                }
+            } else {
+                // Usuario no autenticado
+                sessionStorage.removeItem('isLoggedIn');
+                sessionStorage.removeItem('userRole');
+                
+                if (currentPage !== 'index.html' && currentPage !== '') {
+                    window.location.href = 'index.html';
+                }
+            }
+        });
     </script>
 </body>
 </html>
