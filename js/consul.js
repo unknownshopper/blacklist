@@ -1,83 +1,134 @@
 import { db } from './firebase-config.js';
-import { collection, getDocs, query, where, deleteDoc, doc } from 'https://www.gstatic.com/firebasejs/10.5.2/firebase-firestore.js';
+import { collection, query, orderBy, getDocs } from 'https://www.gstatic.com/firebasejs/10.5.2/firebase-firestore.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const searchForm = document.getElementById('searchForm');
-    const searchInput = document.getElementById('searchInput');
+    const userRole = sessionStorage.getItem('userRole');
+    
+    if (userRole !== 'admin') {
+        alert('Acceso denegado. Solo los administradores pueden ver los registros.');
+        return;
+    }
+
     const recordsList = document.getElementById('recordsList');
-    const actionsHeader = document.getElementById('actionsHeader');
-    const isAdmin = sessionStorage.getItem('userRole') === 'admin';
+    
+    try {
+        // Ordenar por RFC y fecha de creación
+        const q = query(
+            collection(db, 'records'),
+            orderBy('rfc'),
+            orderBy('createdAt', 'desc')
+        );
+        
+        const querySnapshot = await getDocs(q);
+        const recordsByRfc = {};
 
-    if (isAdmin) {
-        actionsHeader.style.display = 'table-cell';
-    }
-
-    async function loadRecords(searchTerm = '') {
-        try {
-            let q;
-            if (searchTerm) {
-                q = query(collection(db, 'records'), 
-                    where('fullName', '>=', searchTerm),
-                    where('fullName', '<=', searchTerm + '\uf8ff')
-                );
-            } else if (isAdmin) {
-                q = collection(db, 'records');
-            } else {
-                recordsList.innerHTML = '<tr><td colspan="5">Ingrese un término de búsqueda</td></tr>';
-                return;
-            }
-
-            const querySnapshot = await getDocs(q);
-            recordsList.innerHTML = '';
+        // Agrupar registros por RFC
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            const rfc = data.rfc;
             
-            if (querySnapshot.empty) {
-                recordsList.innerHTML = '<tr><td colspan="5">No se encontraron registros</td></tr>';
-                return;
+            if (!recordsByRfc[rfc]) {
+                recordsByRfc[rfc] = {
+                    fullName: data.fullName,
+                    records: []
+                };
             }
-
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${data.fullName}</td>
-                    <td>${data.rfc}</td>
-                    <td>${data.company}</td>
-                    <td>${new Date(data.terminationDate).toLocaleDateString()}</td>
-                    <td>${data.terminationReason}</td>
-                    ${isAdmin ? `<td><button onclick="deleteRecord('${doc.id}')" class="delete-btn">Eliminar</button></td>` : ''}
-                `;
-                recordsList.appendChild(row);
+            
+            recordsByRfc[rfc].records.push({
+                ...data,
+                id: doc.id
             });
-        } catch (error) {
-            console.error('Error loading records:', error);
-            alert('Error al cargar los registros');
+        });
+
+        // Mostrar resultados agrupados
+        for (const [rfc, data] of Object.entries(recordsByRfc)) {
+            const row = document.createElement('tr');
+            const recordCount = data.records.length;
+            
+            row.innerHTML = `
+                <td>${data.fullName}</td>
+                <td>${rfc}</td>
+                <td>${recordCount} registro(s)</td>
+                <td>
+                    <button class="toggle-history" data-rfc="${rfc}">Ver historial</button>
+                </td>
+            `;
+            
+            recordsList.appendChild(row);
+            
+            // Crear fila de detalles oculta
+            const detailRow = document.createElement('tr');
+            detailRow.className = 'history-detail';
+            detailRow.id = `detail-${rfc}`;
+            detailRow.style.display = 'none';
+            
+            let detailContent = `
+                <td colspan="4">
+                    <div class="history-container">
+                        <h4>Historial de ${data.fullName} (${rfc})</h4>
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Empresa</th>
+                                    <th>Fecha de despido</th>
+                                    <th>Motivo</th>
+                                    <th>Fecha de registro</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+            
+            // Ordenar registros por fecha (más reciente primero)
+            data.records.sort((a, b) => {
+                const dateA = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt)) : 0;
+                const dateB = b.createdAt ? (b.createdAt.toDate ? b.createdAt.toDate() : new Date(b.createdAt)) : 0;
+                return dateB - dateA;
+            });
+            
+            data.records.forEach(record => {
+                const date = record.createdAt?.toDate();
+                const formattedDate = date ? date.toLocaleDateString() : 'N/A';
+                const terminationDate = record.terminationDate || 'N/A';
+                
+                detailContent += `
+                    <tr>
+                        <td>${record.company}</td>
+                        <td>${terminationDate}</td>
+                        <td>${record.terminationReason}</td>
+                        <td>${formattedDate}</td>
+                    </tr>
+                `;
+            });
+            
+            detailContent += `
+                            </tbody>
+                        </table>
+                    </div>
+                </td>
+            `;
+            
+            detailRow.innerHTML = detailContent;
+            recordsList.appendChild(detailRow);
         }
-    }
 
-    // Delete record function (only for admin)
-    if (isAdmin) {
-        window.deleteRecord = async (docId) => {
-            if (confirm('¿Está seguro de eliminar este registro?')) {
-                try {
-                    await deleteDoc(doc(db, 'records', docId));
-                    await loadRecords(searchInput.value);
-                    alert('Registro eliminado exitosamente');
-                } catch (error) {
-                    console.error('Error deleting record:', error);
-                    alert('Error al eliminar el registro');
+        // Agregar manejadores de eventos para los botones de historial
+        document.querySelectorAll('.toggle-history').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const rfc = e.target.getAttribute('data-rfc');
+                const detailRow = document.getElementById(`detail-${rfc}`);
+                
+                if (detailRow.style.display === 'none') {
+                    detailRow.style.display = 'table-row';
+                    e.target.textContent = 'Ocultar historial';
+                } else {
+                    detailRow.style.display = 'none';
+                    e.target.textContent = 'Ver historial';
                 }
-            }
-        };
-    }
+            });
+        });
 
-    // Search form handler
-    searchForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await loadRecords(searchInput.value.trim());
-    });
-
-    // Load all records for admin on page load
-    if (isAdmin) {
-        await loadRecords();
+    } catch (error) {
+        console.error('Error al obtener los registros:', error);
+        alert('Error al obtener los registros: ' + error.message);
     }
 });

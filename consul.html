@@ -10,21 +10,6 @@
     <script src="js/nav.js" defer></script>
     <script type="module" src="js/firebase-config.js"></script>
     <script type="module" src="js/auth.js"></script>
-    <script type="module" src="https://www.gstatic.com/firebasejs/10.5.2/firebase-app-compat.js"></script>
-    <script type="module" src="https://www.gstatic.com/firebasejs/10.5.2/firebase-firestore-compat.js"></script>
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyAB-H4NnL2DCSByPEcG8oiCC0BDdN6nM3c",
-            authDomain: "blacklisttabasco.firebaseapp.com",
-            projectId: "blacklisttabasco",
-            storageBucket: "blacklisttabasco.firebasestorage.app",
-            messagingSenderId: "1093851271967",
-            appId: "1:1093851271967:web:46becb04a4052432a5d62a"
-        };
-        firebase.initializeApp(firebaseConfig);
-        window.db = firebase.firestore();
-    </script>
-    <script src="js/consul.js" defer></script>
 </head>
 <body>
     <nav>
@@ -74,5 +59,7 @@
             </div>
         </section>
     </main>
+    <script type="module" src="js/consul.js"></script>
+
 </body>
 </html>

@@ -1,15 +1,11 @@
 import { db } from './firebase-config.js';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.5.2/firebase-firestore.js';
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.5.2/firebase-auth.js";
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Verificar autenticación
-    const isLoggedIn = sessionStorage.getItem('isLoggedIn');
-    if (!isLoggedIn) {
-        window.location.href = 'index.html';
-        return;
-    }
-
     const captureForm = document.querySelector('.capture-form');
+    const auth = getAuth();
+const user = auth.currentUser;
     
     captureForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -21,16 +17,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 company: captureForm.company.value,
                 terminationDate: captureForm.termination_date.value,
                 terminationReason: captureForm.termination_reason.value,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                createdBy: sessionStorage.getItem('username')
+                createdAt: serverTimestamp(),
+                createdBy: sessionStorage.getItem('userRole'),
+                createdByUid: user ? user.uid : null,
+                createdByEmail: user ? user.email : null
             };
 
-            await db.collection('records').add(formData);
+            await addDoc(collection(db, 'records'), formData);
             alert('Registro guardado exitosamente');
             captureForm.reset();
         } catch (error) {
             console.error('Error:', error);
-            alert('Error al guardar el registro');
+            alert('Error al guardar el registro: ' + error.message);
         }
     });
 
