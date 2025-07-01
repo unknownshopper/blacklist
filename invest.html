@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlackList - Investigación</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" href="img/favicon.ico" type="image/x-icon">
+    <script src="js/nav.js" defer></script>
+    <script type="module">
+        import { db, auth } from './js/firebase-config.js';
+        window.db = db;
+        window.auth = auth;
+    </script>
+    <style>
+        .notification {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .notification.success {
+            background-color: #dff0d8;
+            border-color: #d6e9c6;
+        }
+        
+        .notification.error {
+            background-color: #f2dede;
+            border-color: #ebccd1;
+        }
+        
+        .notification-content {
+            margin-bottom: 1rem;
+        }
+        
+        .notification-close {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5rem;
+        }
+        
+        /* Estilos para el modal de confirmación */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .modal.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transform: translateY(-20px);
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .modal.show .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 1.5rem;
+        }
+
+        .close-modal {
+            font-size: 28px;
+            cursor: pointer;
+            color: #777;
+        }
+
+        .close-modal:hover {
+            color: #333;
+        }
+
+        .modal-body {
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .success-icon {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .reference-info {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border-left: 4px solid #3498db;
+        }
+
+        .next-steps {
+            margin-top: 25px;
+        }
+
+        .next-steps ol {
+            padding-left: 20px;
+        }
+
+        .next-steps li {
+            margin-bottom: 10px;
+            position: relative;
+            padding-left: 25px;
+        }
+
+        .next-steps li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary, .btn-secondary {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-secondary {
+            background-color: #f1f1f1;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background-color: #e0e0e0;
+        }
+
+        @media print {
+            .modal,
+            .modal.show {
+                position: static;
+                background: none;
+                display: block !important;
+                opacity: 1;
+            }
+            
+            .modal-content {
+                box-shadow: none;
+                width: 100%;
+                max-width: 100%;
+            }
+            
+            .modal-footer {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        <div class="nav-links">
+            <a href="index.html">Inicio</a>
+            <a href="consul.html">Consultas</a>
+            <a href="captur.html">Capturas</a>
+            <a href="invest.html" class="active">Investigación</a>
+            <a href="contact.html">Contacto</a>
+            <button id="logoutBtn" class="logout-button">Cerrar Sesión</button>
+        </div>
+    </nav>
+
+    <main>
+        <h1>Servicio de Investigación</h1>
+        <p class="subtitle">Solicite una investigación profesional sobre antecedentes laborales y referencias</p>
+        
+        <div class="content-wrapper">
+            <section class="form-section">
+                <h2>Solicitar Investigación</h2>
+                <form id="investigationForm" class="capture-form">
+                    <div class="form-group">
+                        <label for="fullName">Nombre Completo</label>
+                        <input type="text" id="fullName" name="fullName" placeholder="Nombre(s) Apellido Paterno Apellido Materno" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="rfc">RFC (Opcional)</label>
+                        <input type="text" id="rfc" name="rfc" placeholder="Ingrese RFC (opcional)" 
+                               pattern="^[A-ZÑ&]{3,4}[0-9]{6}[A-V1-9][A-Z1-9][0-9A]$">
+                        <small class="form-hint">Formato: 4 letras, 6 números, 3 caracteres alfanuméricos</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="company">Empresa de Interés (Opcional)</label>
+                        <input type="text" id="company" name="company" placeholder="Nombre de la empresa donde laboró">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="details">Detalles Adicionales</label>
+                        <textarea id="details" name="details" rows="4" placeholder="Proporcione información adicional que pueda ser de utilidad para la investigación (ej. período laboral, puestos, etc.)"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">¿Tiene una denuncia activa?</label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="hasComplaint" id="complaintYes" value="yes">
+                            <label class="form-check-label" for="complaintYes">Sí</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="hasComplaint" id="complaintNo" value="no" checked>
+                            <label class="form-check-label" for="complaintNo">No</label>
+                        </div>
+                        
+                        <div id="complaintNumberContainer" style="display: none; margin-top: 1rem;">
+                            <label for="complaintNumber" class="form-label">Número de folio de la denuncia</label>
+                            <input type="text" class="form-control" id="complaintNumber" name="complaintNumber" placeholder="Ingrese el número de folio">
+                        </div>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="terms" name="terms" required>
+                        <label for="terms">Acepto los <a href="#" id="showTerms">Términos y Condiciones</a> de uso de la información</label>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary">Solicitar Investigación</button>
+                </form>
+            </section>
+            
+            <aside class="info-panel">
+                <h3>¿Qué incluye nuestro servicio?</h3>
+                <ul class="feature-list">
+                    <li>✓ Verificación de antecedentes laborales</li>
+                    <li>✓ Confirmación de puestos y responsabilidades</li>
+                    <li>✓ Períodos de empleo</li>
+                    <li>✓ Motivo de separación</li>
+                    <li>✓ Referencias laborales</li>
+                    <li>✓ Verificación de documentos</li>
+                </ul>
+                
+                <div class="notice-box">
+                    <h4>Uso de la información</h4>
+                    <p>La información proporcionada es confidencial y debe utilizarse únicamente para fines laborales. El mal uso de esta información puede tener consecuencias legales.</p>
+                </div>
+            </aside>
+        </div>
+    </main>
+    
+    <!-- Modal de Confirmación -->
+    <div id="confirmationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>¡Solicitud Recibida con Éxito!</h2>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="success-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#4CAF50" width="64" height="64">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                </div>
+                <p>Hemos recibido tu solicitud de investigación. Un agente especializado se pondrá en contacto contigo en las próximas 24 horas.</p>
+                
+                <div class="reference-info">
+                    <h3>Detalles de tu solicitud</h3>
+                    <p><strong>Número de seguimiento:</strong> <span id="trackingNumber">BL-${Date.now().toString().slice(-6)}</span></p>
+                    <p><strong>Fecha:</strong> <span id="requestDate"></span></p>
+                </div>
+                
+                <div class="next-steps">
+                    <h3>Próximos pasos:</h3>
+                    <ol>
+                        <li>Revisaremos tu solicitud detalladamente</li>
+                        <li>Un agente se pondrá en contacto contigo</li>
+                        <li>Recibirás una cotización personalizada</li>
+                        <li>Iniciaremos la investigación una vez aprobada</li>
+                    </ol>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="copyInfo" class="btn-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    Copiar información
+                </button>
+                <button id="printInfo" class="btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                        <rect x="6" y="14" width="12" height="8"></rect>
+                    </svg>
+                    Imprimir comprobante
+                </button>
+                <button id="closeModal" class="btn-primary">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Términos -->
+    <div id="termsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Términos y Condiciones</h2>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <h3>1. Uso de la Información</h3>
+                <p>La información proporcionada a través de este servicio debe utilizarse exclusivamente para fines de evaluación laboral y toma de decisiones de contratación.</p>
+                
+                <h3>2. Confidencialidad</h3>
+                <p>Toda la información obtenida es estrictamente confidencial y no debe ser divulgada a terceros sin el consentimiento expreso del interesado, salvo por requerimiento legal.</p>
+                
+                <h3>3. Responsabilidad</h3>
+                <p>BlackList se compromete a proporcionar información veraz y actualizada, pero no se hace responsable por el uso que se le dé a la misma.</p>
+                
+                <h3>4. Protección de Datos</h3>
+                <p>Los datos personales recabados serán protegidos conforme a lo dispuesto por la Ley de Protección de Datos Personales en Posesión de los Particulares.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary close-modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Manejo del modal
+        const modal = document.getElementById('termsModal');
+        const showTerms = document.getElementById('showTerms');
+        const closeButtons = document.querySelectorAll('.close-modal');
+        
+        showTerms.addEventListener('click', (e) => {
+            e.preventDefault();
+            modal.style.display = 'block';
+        });
+        
+        closeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+        });
+        
+        window.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+        
+        // Mostrar/ocultar campo de número de folio
+        document.getElementById('complaintYes').addEventListener('change', function() {
+            const container = document.getElementById('complaintNumberContainer');
+            const input = document.getElementById('complaintNumber');
+            container.style.display = this.checked ? 'block' : 'none';
+            if (this.checked) {
+                input.setAttribute('required', 'required');
+                input.focus();
+            } else {
+                input.removeAttribute('required');
+                input.value = '';
+            }
+        });
+
+        document.getElementById('complaintNo').addEventListener('change', function() {
+            const container = document.getElementById('complaintNumberContainer');
+            const input = document.getElementById('complaintNumber');
+            container.style.display = 'none';
+            input.removeAttribute('required');
+            input.value = '';
+        });
+        
+        // Mostrar modal de confirmación al enviar el formulario
+        document.getElementById('investigationForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const fullName = document.getElementById('fullName').value.trim();
+            const rfc = document.getElementById('rfc').value.trim();
+            
+            if (!fullName && !rfc) {
+                alert('Por favor ingrese al menos el nombre completo o el RFC');
+                return;
+            }
+            
+            // Actualizar información en el modal
+            const now = new Date();
+            document.getElementById('requestDate').textContent = now.toLocaleString();
+            
+            // Mostrar modal
+            const modal = document.getElementById('confirmationModal');
+            modal.classList.add('show');
+            
+            // Limpiar formulario
+            e.target.reset();
+        });
+        
+        // Cerrar modal
+        function closeModal() {
+            document.getElementById('confirmationModal').classList.remove('show');
+        }
+        
+        // Manejadores de eventos para los botones del modal
+        document.querySelector('.close-modal').addEventListener('click', closeModal);
+        document.getElementById('closeModal').addEventListener('click', closeModal);
+        
+        // Cerrar al hacer clic fuera del contenido
+        document.getElementById('confirmationModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('confirmationModal')) {
+                closeModal();
+            }
+        });
+        
+        // Copiar información al portapapeles
+        document.getElementById('copyInfo').addEventListener('click', () => {
+            const trackingNumber = document.getElementById('trackingNumber').textContent;
+            const requestDate = document.getElementById('requestDate').textContent;
+            const textToCopy = `Solicitud de Investigación\nNúmero de Seguimiento: ${trackingNumber}\nFecha: ${requestDate}`;
+            
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const copyBtn = document.getElementById('copyInfo');
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = '✓ Copiado';
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalText;
+                }, 2000);
+            });
+        });
+        
+        // Imprimir comprobante
+        document.getElementById('printInfo').addEventListener('click', () => {
+            window.print();
+        });
+    </script>
+</body>
+</html>
