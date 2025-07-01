@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = loginForm.email.value;
+            const email = loginForm.username.value;  // Changed from loginForm.email to loginForm.username
             const password = loginForm.password.value;
 
             if (!email || !password) {
