@@ -76,15 +76,17 @@ function setupLoginForm() {
         const password = passwordInput.value;
 
         if (!email || !password) {
-            alert('Por favor ingresa correo y contraseña');
+            alert('Por favor ingresa usuario y contraseña');
             return;
         }
 
-        // Validar formato de correo electrónico
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            alert('Por favor ingresa un correo electrónico válido');
-            return;
+        // Si el usuario ingresó un correo, validar su formato
+        if (email.includes('@')) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                alert('Por favor ingresa un correo electrónico válido');
+                return;
+            }
         }
 
         try {
