@@ -8,15 +8,22 @@ import {
 
 // Verificar estado de autenticación
 onAuthStateChanged(auth, (user) => {
+    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+    
     if (user) {
         // Usuario autenticado
         sessionStorage.setItem('isLoggedIn', 'true');
-        sessionStorage.setItem('userRole', 'admin'); // Ajusta según tu lógica de roles
+        
+        // Si estamos en la página de login, redirigir a consul.html
+        if (currentPage === 'index.html' || currentPage === '') {
+            window.location.href = 'consul.html';
+        }
     } else {
         // Usuario no autenticado
         sessionStorage.removeItem('isLoggedIn');
-        sessionStorage.removeItem('userRole');
-        if (!window.location.pathname.endsWith('index.html')) {
+        
+        // Si no estamos en la página de login, redirigir a index.html
+        if (currentPage !== 'index.html' && currentPage !== '') {
             window.location.href = 'index.html';
         }
     }
@@ -42,79 +49,65 @@ function setupLogout() {
 
 // Función para manejar el inicio de sesión
 function setupLoginForm() {
-    console.log('Buscando formulario de login...');
+    const loginForm = document.querySelector('.login-form');
     
-    // Función para inicializar el formulario
-    function initForm() {
-        const loginForm = document.querySelector('.login-form');
+    if (!loginForm) {
+        console.log('No se encontró el formulario de login en esta página');
+        return;
+    }
+    
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
         
-        if (!loginForm) {
-            console.warn('Formulario no encontrado, reintentando...');
-            setTimeout(initForm, 100); // Reintentar después de 100ms
+        const emailInput = loginForm.elements['username'];
+        const passwordInput = loginForm.elements['password'];
+        
+        if (!emailInput || !passwordInput) {
+            console.error('No se encontraron los campos de usuario/contraseña');
+            return;
+        }
+        
+        const username = emailInput.value.trim();
+        const password = passwordInput.value;
+
+        if (!username || !password) {
+            alert('Por favor ingresa usuario y contraseña');
             return;
         }
 
-        console.log('✔️ Formulario encontrado:', loginForm);
-        
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
+        const email = username.includes('@') ? username : `${username}@blacklist.app`;
+
+        try {
+            console.log('Intentando iniciar sesión con:', { email });
+            await signInWithEmailAndPassword(auth, email, password);
+        } catch (error) {
+            console.error('Error de autenticación:', error);
+            let errorMessage = 'Error al iniciar sesión';
             
-            console.log('Formulario enviado');
-            
-            // Obtener valores usando el método más confiable
-            const emailInput = loginForm.elements['username'];
-            const passwordInput = loginForm.elements['password'];
-            
-            console.log('Elementos del formulario:', {
-                username: emailInput,
-                password: passwordInput
-            });
-            
-            if (!emailInput || !passwordInput) {
-                console.error('❌ No se encontraron los campos de usuario/contraseña');
-                return;
+            if (error.code === 'auth/invalid-email') {
+                errorMessage = 'El correo electrónico no es válido';
+            } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                errorMessage = 'Usuario o contraseña incorrectos';
+            } else if (error.code === 'auth/too-many-requests') {
+                errorMessage = 'Demasiados intentos fallidos. Por favor, inténtalo más tarde.';
+            } else {
+                errorMessage = error.message;
             }
             
-            const username = emailInput.value.trim();
-            const password = passwordInput.value;
-
-            if (!username || !password) {
-                alert('Por favor ingresa usuario y contraseña');
-                return;
-            }
-
-            // Convertir el nombre de usuario a un correo electrónico válido
-            // Agregando un dominio temporal solo para Firebase
-            const email = username.includes('@') ? username : `${username}@blacklist.app`;
-
-            try {
-                console.log('Intentando iniciar sesión con:', { email });
-                await signInWithEmailAndPassword(auth, email, password);
-                // Redirigir después de inicio de sesión exitoso
-                window.location.href = 'consul.html';
-            } catch (error) {
-                console.error('Error de autenticación:', error);
-                let errorMessage = 'Error al iniciar sesión';
-                
-                if (error.code === 'auth/invalid-email') {
-                    errorMessage = 'El correo electrónico no es válido';
-                } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-                    errorMessage = 'Usuario o contraseña incorrectos';
-                } else {
-                    errorMessage = error.message;
-                }
-                
-                alert(errorMessage);
-            }
-        });
-    }
-    
-    // Iniciar la verificación del formulario
-    initForm();
+            alert(errorMessage);
+        }
+    });
 }
 
-// Inicializar cuando el DOM esté completamente cargado
+// Inicializar solo lo necesario cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', () => {
+    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+    
+    // Configurar el formulario solo en la página de login
+    if (currentPage === 'index.html' || currentPage === '') {
+        setupLoginForm();
+    }
+    
+    // Configurar el botón de logout si existe
     setupLogout();
-    setupLoginForm();
 });
