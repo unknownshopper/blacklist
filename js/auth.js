@@ -72,22 +72,17 @@ function setupLoginForm() {
             return;
         }
         
-        const email = emailInput.value;
+        const username = emailInput.value.trim();
         const password = passwordInput.value;
 
-        if (!email || !password) {
+        if (!username || !password) {
             alert('Por favor ingresa usuario y contraseña');
             return;
         }
 
-        // Si el usuario ingresó un correo, validar su formato
-        if (email.includes('@')) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                alert('Por favor ingresa un correo electrónico válido');
-                return;
-            }
-        }
+        // Convertir el nombre de usuario a un correo electrónico válido
+        // Agregando un dominio temporal solo para Firebase
+        const email = username.includes('@') ? username : `${username}@blacklist.app`;
 
         try {
             console.log('Intentando iniciar sesión con:', { email });
