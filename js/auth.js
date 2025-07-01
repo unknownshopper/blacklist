@@ -52,6 +52,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // Validar formato de correo electrónico
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                alert('Por favor ingresa un correo electrónico válido');
+                return;
+            }
+
             try {
                 await signInWithEmailAndPassword(auth, email, password);
                 // Redirigir después de inicio de sesión exitoso
