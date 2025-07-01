@@ -22,30 +22,38 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// Manejar cierre de sesión
-document.addEventListener('DOMContentLoaded', () => {
+// Función para manejar el cierre de sesión
+function setupLogout() {
     const logoutBtn = document.getElementById('logoutBtn');
     
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', async (e) => {
-            e.preventDefault();
-            try {
-                await signOut(auth);
-                window.location.href = 'index.html';
-            } catch (error) {
-                console.error('Error al cerrar sesión:', error);
-                alert('Error al cerrar sesión: ' + error.message);
-            }
-        });
+    if (!logoutBtn) return;
+    
+    logoutBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+            await signOut(auth);
+            window.location.href = 'index.html';
+        } catch (error) {
+            console.error('Error al cerrar sesión:', error);
+            alert('Error al cerrar sesión: ' + error.message);
+        }
+    });
+}
+
+// Función para manejar el inicio de sesión
+function setupLoginForm() {
+    const loginForm = document.querySelector('.login-form');
+    if (!loginForm) {
+        console.warn('No se encontró el formulario de login');
+        return;
     }
 
-    // Manejar inicio de sesión
-    const loginForm = document.querySelector('.login-form');
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = loginForm.querySelector('#username').value;
-            const password = loginForm.querySelector('#password').value;
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const formData = new FormData(loginForm);
+        const email = formData.get('username');
+        const password = formData.get('password');
 
             if (!email || !password) {
                 alert('Por favor ingresa correo y contraseña');
@@ -78,5 +86,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert(errorMessage);
             }
         });
-    }
+}
+
+// Inicializar cuando el DOM esté completamente cargado
+document.addEventListener('DOMContentLoaded', () => {
+    setupLogout();
+    setupLoginForm();
 });
