@@ -16,9 +16,28 @@
         // Hacer disponible globalmente si es necesario
         window.db = db;
         window.auth = auth;
+        
+        // Inicializar la autenticación
+        import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.5.2/firebase-auth.js';
+        
+        // Verificar estado de autenticación
+        onAuthStateChanged(auth, (user) => {
+            const currentPage = window.location.pathname.split('/').pop();
+            
+            if (user) {
+                // Usuario autenticado
+                if (currentPage === 'index.html') {
+                    window.location.href = 'consul.html';
+                }
+            } else {
+                // Usuario no autenticado
+                if (currentPage !== 'index.html') {
+                    window.location.href = 'index.html';
+                }
+            }
+        });
     </script>
     <script type="module" src="js/auth.js"></script>
-    <script type="module" src="js/login.js"></script>
 </head>
 <body>
     <nav>
